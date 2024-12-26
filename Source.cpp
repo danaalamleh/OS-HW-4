@@ -14,14 +14,14 @@ struct Process{
 	int ST;// ST: Start Time
 	int TAT = 0; // TAT: Turnaround Time
 	int WT = 0; // WT: Waiting Time
-	int RT; // RT: Remaining Time
-	int lastExc;//lastExc: the last time process was excuted , I use it in RR
+	int RT; // RT: Remaining Time	
+	int lastExc;//lastExc: the last time process was excuted 
 };
 
 void print(const vector<Process>& processes, const vector<pair<string, int>>& ganttChart, int totalTime,int idleTime, const string& algo) {
-	cout << "\n---------------------------------------------------\nThe Results for "
-		<< algo << " Scheduling:\n";
+	cout << "\n---------------------------------------------------\nThe Results for " << algo << " Scheduling:\n";
 	cout << "\nGantt Chart:\n";
+
 	for (const auto& g : ganttChart) {
 		if(g.first== "Idle")
 			cout << "| " << "Idle" << " ";
@@ -60,28 +60,29 @@ void FCFS(vector<Process> processes){
 	vector<pair<string, int>> GanttChart;
 	int CT = 0, idle = 0; // CT: Current Time
 
-	for (auto& p : processes) {
-		if (CT < p.AT){
-			GanttChart.emplace_back("Idle" , CT);
-			idle += (p.AT - CT);
-			CT = p.AT;
-		}
-		
-		GanttChart.emplace_back(p.pid, CT);
-		p.ST = CT;
-		CT += p.BT;
-		p.FT = CT;
-		p.TAT = p.FT - p.AT;
-		p.WT = p.ST - p.AT;
-	}
-	print(processes, GanttChart, CT, idle, "FCFS");
+		for (auto& p : processes) {
+			//Check if the process arrival time less than the current time(if CPU is idle in this time)
+		    if (CT < p.AT){
+			    GanttChart.emplace_back("Idle" , CT);
+			    idle += (p.AT - CT);
+			    CT = p.AT;
+		    }
+		    // if not idle the process will printed in the Gantt Chart and calculate the TAT and WT
+		    GanttChart.emplace_back(p.pid, CT);
+		    p.ST = CT;
+		    CT += p.BT;
+		    p.FT = CT;
+		    p.TAT = p.FT - p.AT;
+		    p.WT = p.ST - p.AT;
+     	}
+        print(processes, GanttChart, CT, idle, "FCFS");
 }
 
 void SRT(vector<Process> processes){
 	vector<pair<string, int>> ganttChart;
 	int CT = 0, completed = 0, idle = 0;
 	int n = processes.size(); 
- 
+    //initialization
 	for (auto& p : processes){
 		p.RT = p.BT;
 		p.ST = -1;
@@ -90,36 +91,39 @@ void SRT(vector<Process> processes){
 	while (completed < n) { 
 		int idx = -1, min_time = INT_MAX;
 
+		//this loop to find the process with shortest remaining time 
 		for (int i = 0; i < n; i++) {
 			if (processes[i].AT <= CT && processes[i].RT > 0 && processes[i].RT < min_time) {
 				idx = i; 
 				min_time = processes[i].RT;
 			} 
 		} 
-
+		// to check if cpu idle
 		if (idx == -1) { 
 			ganttChart.emplace_back("Idle", CT);
 			idle++; 
 			CT++; 
 			continue; 
 		} 
-
+		// print in Gantt Chart
 		if (ganttChart.empty() || ganttChart.back().first != processes[idx].pid){ 
 			ganttChart.emplace_back(processes[idx].pid, CT);
 		} 
 
+		//initialization starting time
 		if (processes[idx].ST == -1) {
 			processes[idx].ST = CT;
 		}
 
+		// for checking the excution for process that leave CPU and enter again
 		if (processes[idx].lastExc != -1 && processes[idx].lastExc < CT) {
 			processes[idx].WT += (CT - processes[idx].lastExc);
 		}
-
+		//update values
 		processes[idx].lastExc = CT;
 		processes[idx].RT--;
 		CT++;
-
+		//calculate TAT and WT after remaining time finished
 		if (processes[idx].RT == 0) {
 			processes[idx].FT = CT;
 			processes[idx].TAT = processes[idx].FT - processes[idx].AT; 
@@ -137,6 +141,7 @@ void RR(vector<Process> processes, int quantum){
 	int n = processes.size();
 	vector<bool> isInQueue(n, false);
 
+	//initialization
 	for (auto& p : processes) {
 		p.RT = p.BT;
 		p.ST = -1;
@@ -146,24 +151,26 @@ void RR(vector<Process> processes, int quantum){
 	readyQueue.push(0);
 	isInQueue[0] = true;
 
+	//push the process in the queue
 	while (!readyQueue.empty()){
 		int c = readyQueue.front();
 		readyQueue.pop();
 		isInQueue[c] = false;
-
+		//check if the CPU idle
 		if (CT < processes[c].AT) {
 			ganttChart.emplace_back("Idle", CT);
 			idle += (processes[c].AT - CT);
 			CT = processes[c].AT;
 		}
-		if (ganttChart.empty() || ganttChart.back().first != processes[c].pid){ 
+		//print in the Gantt Chart
+		if (ganttChart.empty() || ganttChart.back().first != processes[c].pid){
 			ganttChart.emplace_back(processes[c].pid, CT);
 		}
-		 
-		if (processes[c].ST == -1) { 
-			processes[c].ST = CT; 
+		//initialization
+		if (processes[c].ST == -1) {
+			processes[c].ST = CT;
 		}
-
+		// for checking the excution for process that leave CPU and enter again
 		if (processes[c].lastExc != -1 && processes[c].lastExc < CT) {
 			processes[c].WT += (CT - processes[c].lastExc);
 		} 
@@ -190,9 +197,7 @@ void RR(vector<Process> processes, int quantum){
 			processes[c].TAT = processes[c].FT - processes[c].AT; 
 			processes[c].WT = processes[c].TAT - processes[c].BT;
 			completed++;
-		}
-		
-		
+		}	
 	}
 	print(processes, ganttChart, CT, idle, "Round Robin");
 }
